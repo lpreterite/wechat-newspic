@@ -70,13 +70,16 @@ describe('renderArticle', () => {
     expect(result.content).toContain('src="https://example.com/img.png"');
   });
 
-  it('injects description as blockquote', async () => {
+  it('does NOT inject description into body (#69)', async () => {
     const result = await renderArticle({
       content: '---\ntitle: Desc\ntype: article\ncreated: 2026-06-25\ncover: cover.png\ndescription: 这是一段引言\n---\n\n正文内容',
     });
 
-    expect(result.content).toContain('这是一段引言');
-    expect(result.content).toContain('<blockquote');
+    // #69: description 是元数据，不应作为 blockquote 注入正文
+    expect(result.content).not.toContain('<blockquote');
+    expect(result.content).not.toContain('这是一段引言');
+    // description 仍应保留在 frontmatter 返回值里
+    expect(result.description).toBe('这是一段引言');
   });
 
   it('returns all frontmatter fields in result', async () => {

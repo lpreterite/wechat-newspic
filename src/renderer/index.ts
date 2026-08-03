@@ -57,12 +57,10 @@ export async function renderArticle(options: RenderOptions): Promise<RenderedArt
   const core = await getCore();
   const { frontmatter, content: mdBody } = parseFrontmatter(content, { strict: false });
 
-  let body = mdBody;
-  if (frontmatter.description) {
-    body = `> ${frontmatter.description}\n\n${body}`;
-  }
-
-  const html = await core.renderMarkdown(body);
+  // #69: 不再将 frontmatter.description 强注正文。
+  // description 是文章元数据（SEO/Open Graph/摘要），不应作为块引用插入正文。
+  // 摘要功能由 frontmatter.digest（微信草稿摘要）承担。
+  const html = await core.renderMarkdown(mdBody);
 
   const el = dom.window.document.createElement('div');
   el.id = 'wenyan';
