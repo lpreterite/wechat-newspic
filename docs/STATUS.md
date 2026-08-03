@@ -177,7 +177,7 @@
 | schema/index.test.ts | 11 | ✅ |
 | cli/credential.test.ts | 3 | ✅ |
 | cli/serve.test.ts | 2 | ✅ |
-| **单元测试总计** | **199** | **✅ 全部通过** |
+| **单元测试总计** | **200** | **✅ 全部通过** |
 | test/e2e/preview/file-browser.test.ts | 7 | ✅ 新增 #69 E2E |
 | **E2E 测试总计** | **7** | **✅ 全部通过** |
 ## 已知问题（GitHub Issues）
