@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.1](https://github.com/lpreterite/wx-newspic/compare/v0.4.0...v0.4.1) (2026-08-03)
+
+
+### Bug Fixes
+
+* **#68:** publish 图片路径基准改用 md 文件所在目录 + 失败可见化 ([becfaf3](https://github.com/lpreterite/wx-newspic/commit/becfaf3e9094ab437eefddd3c6220de11153d4b1)), closes [#68](https://github.com/lpreterite/wx-newspic/issues/68) [#68](https://github.com/lpreterite/wx-newspic/issues/68) [#68](https://github.com/lpreterite/wx-newspic/issues/68)
+* **#69:** preview 图片代理路径重构 + description 强注移除 + 失败可见化 ([22dff79](https://github.com/lpreterite/wx-newspic/commit/22dff795cec828f7a91783bfa7252bb9f312459d)), closes [#69](https://github.com/lpreterite/wx-newspic/issues/69) [#69](https://github.com/lpreterite/wx-newspic/issues/69) [#69](https://github.com/lpreterite/wx-newspic/issues/69)
+* **#69:** 解决 STATUS.md 冲突，更新测试计数为 200 ([a219df3](https://github.com/lpreterite/wx-newspic/commit/a219df3e33d8a79403dc0813c77501802836a2a6)), closes [#69](https://github.com/lpreterite/wx-newspic/issues/69)
+
 # [0.4.0](https://github.com/lpreterite/wx-newspic/compare/v0.3.2...v0.4.0) (2026-07-10)
 
 

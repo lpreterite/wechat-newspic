@@ -1,6 +1,6 @@
 {
   "name": "@packy-tang/wx-newspic",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "微信图片消息发布工具 — 将图片发布为公众号图片消息草稿",
   "type": "module",
   "engines": {
