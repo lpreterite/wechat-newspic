@@ -1,6 +1,6 @@
 # wx-newspic 项目状态
 
-> 最后更新：2026-08-03（修 #68 publish 图片路径基准错误 — PR1 完成；创建 #69 跟踪 preview 失效 + description 注入 — PR2 待开）
+> 最后更新：2026-08-03（修 #68 #69 — publish 图片路径基准 + preview 图片代理重构 + description 强注移除）
 > 项目总览：[README.md](../README.md)
 
 ---
@@ -167,6 +167,7 @@
 | cli/publish.test.ts | 26 | ✅ |
 | cli/publish.test.ts（#68 regression） | 7 | ✅ 新增 |
 | utils/image-path.test.ts | 13 | ✅ 新增 |
+| preview/preview-utils.test.ts | 14 | ✅ 新增 #69 |
 | cli/render.test.ts | 7 | ✅ |
 | renderer/index.test.ts | 10 | ✅ |
 | renderer/themes.test.ts | 4 | ✅ |
@@ -176,9 +177,9 @@
 | schema/index.test.ts | 11 | ✅ |
 | cli/credential.test.ts | 3 | ✅ |
 | cli/serve.test.ts | 2 | ✅ |
-| **单元测试总计** | **185** | **✅ 全部通过** |
-| test/e2e/preview/file-browser.test.ts | 6 | ✅ |
-| **E2E 测试总计** | **6** | **✅ 全部通过** |
+| **单元测试总计** | **199** | **✅ 全部通过** |
+| test/e2e/preview/file-browser.test.ts | 7 | ✅ 新增 #69 E2E |
+| **E2E 测试总计** | **7** | **✅ 全部通过** |
 ## 已知问题（GitHub Issues）
 
 | Issue | 标题 | 优先级 | 状态 |
@@ -232,8 +233,8 @@
 | [#65](https://github.com/lpreterite/wx-newspic/issues/65) | UI: 侧栏视觉改进 | P2 | ✅ 完成 |
 | [#66](https://github.com/lpreterite/wx-newspic/issues/66) | FEAT: frontmatter 类型区分渲染 | P2 | ✅ 完成 |
 | [#67](https://github.com/lpreterite/wx-newspic/issues/67) | ENH: publish 命令 frontmatter 自动检测类型 | P2 | ✅ 完成 — 无显式 `--type` 时从 frontmatter 推断 news/newspic |
-| [#68](https://github.com/lpreterite/wx-newspic/issues/68) | fix: news 模式图片路径解析依赖 CWD 而非 md 文件所在目录 | P1 | ✅ 修复 — 执行 phase A：mdDir 基准 + utils/image-path.ts + failedImages 可见化 + 20 单测 |
-| [#69](https://github.com/lpreterite/wx-newspic/issues/69) | fix: preview 模式图片路径未被替换为代理 URL + description 强注正文 | P1 | 🟡 OPEN — PR2 待 PR1 合并后推进 |
+| [#68](https://github.com/lpreterite/wx-newspic/issues/68) | fix: news 模式图片路径解析依赖 CWD 而非 md 文件所在目录 | P1 | ✅ 修复 — PR1：mdDir 基准 + utils/image-path.ts + failedImages 可见化 + 20 单测 |
+| [#69](https://github.com/lpreterite/wx-newspic/issues/69) | fix: preview 模式图片路径未被替换为代理 URL + description 强注正文 | P1 | ✅ 修复 — PR2：preview-utils 抽取 + 失败可见化 + description 注入移除 + 14 单测 + 1 E2E |
 
 ## 风险项
 

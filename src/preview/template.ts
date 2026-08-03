@@ -1,4 +1,7 @@
+import { serializePreviewUtils, escapeHtmlAttr } from './preview-utils.js';
+
 export function renderPreviewPage(markdown: string, watchDirs: string[] = []): string {
+  const previewUtilsScript = serializePreviewUtils();
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -181,6 +184,8 @@ html, body { height: 100%; font-family: system-ui, -apple-system, sans-serif; ba
 
 <script src="https://cdn.jsdelivr.net/npm/easymde/dist/easymde.min.js"></script>
 <script>
+// #69: 从 preview-utils.ts 注入的纯函数（isRemoteUrl/toProxyUrl/resolveToProxy/escapeHtmlAttr）
+${previewUtilsScript}
 const textarea = document.getElementById('editor');
 const preview = document.getElementById('preview');
 const themeSelect = document.getElementById('themeSelect');
@@ -260,13 +265,6 @@ function setLoading(on) {
   }
 }
 
-function isRemoteUrl(url) {
-  return /^https?:\/\//i.test(url);
-}
-function toProxyUrl(absPath) {
-  return '/image-proxy?path=' + encodeURIComponent(absPath);
-}
-
 async function render() {
   setLoading(true);
   try {
@@ -288,24 +286,31 @@ async function render() {
     var data = await res.json();
     var html = data.content || '';
 
+    // #69: currentFileDir 为空时（未通过侧栏点选文件），不静默替换。
+    // 直接渲染会让 iframe srcdoc 以父文档 base 解析相对路径 → 404。
+    // 状态区显示 warn，提示用户点选侧栏文件。
+    var hasImgInHtml = /<img\b[^>]*src=/i.test(html);
+    if (hasImgInHtml && !currentFileDir) {
+      statusIndicator.innerHTML = '<span style="color:#c30;font-size:12px">未选择文件 — 图片无法预览，请从左侧侧栏点选 md 文件</span>';
+    }
+
     // Convert <img src> relative paths in rendered HTML
     if (currentFileDir) {
       html = html.replace(/<img[^>]+src="([^"]+)"[^>]*>/gi, function(match, src) {
         if (isRemoteUrl(src) || src.startsWith('/image-proxy') || src.startsWith('data:')) return match;
-        var resolved = currentFileDir + '/' + src.replace(/^\\.\\//, '');
-        return match.replace('src="' + src + '"', 'src="' + toProxyUrl(resolved) + '"');
+        return match.replace('src="' + src + '"', 'src="' + resolveToProxy(currentFileDir, src) + '"');
       });
     }
 
     // Convert frontmatter cover / images paths
     var coverUrl = data.cover || '';
     if (coverUrl && !isRemoteUrl(coverUrl) && currentFileDir) {
-      coverUrl = toProxyUrl(currentFileDir + '/' + coverUrl.replace(/^\\.\\//, ''));
+      coverUrl = resolveToProxy(currentFileDir, coverUrl);
     }
     var imageUrls = (data.images || []).map(function(url) {
       if (isRemoteUrl(url)) return url;
       if (!currentFileDir) return url;
-      return toProxyUrl(currentFileDir + '/' + url.replace(/^\\.\\//, ''));
+      return resolveToProxy(currentFileDir, url);
     });
 
     // Build preview HTML based on type
@@ -325,8 +330,9 @@ async function render() {
 }
 
 function buildNewsPicPreview(images, contentHtml) {
+  // #69: 对 url 加 HTML 属性转义，避免特殊字符断裂 srcdoc HTML
   var slides = images.map(function(url) {
-    return '<div class="swiper-slide"><img src="' + url + '" alt=""></div>';
+    return '<div class="swiper-slide"><img src="' + escapeHtmlAttr(url) + '" alt=""></div>';
   }).join('');
   var bodyContent = '<div class="preview-swiper swiper mySwiper"><div class="swiper-wrapper">' + slides + '</div><div class="swiper-pagination"></div></div><div class="wenyan-content">' + contentHtml + '</div>';
   return '<!DOCTYPE html><html lang="zh-CN"><head>' +
@@ -341,7 +347,8 @@ function buildNewsPicPreview(images, contentHtml) {
 }
 
 function buildArticlePreview(coverUrl, contentHtml) {
-  return '<div class="preview-cover"><img src="' + coverUrl + '" alt="cover"></div><div class="wenyan-content">' + contentHtml + '</div>';
+  // #69: 对 coverUrl 加 HTML 属性转义
+  return '<div class="preview-cover"><img src="' + escapeHtmlAttr(coverUrl) + '" alt="cover"></div><div class="wenyan-content">' + contentHtml + '</div>';
 }
 
 var sidebar = document.getElementById('fileSidebar');

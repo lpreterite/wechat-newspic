@@ -24,6 +24,14 @@ describe('preview 文件浏览器 E2E', () => {
     mkdirSync(join(singleDir, 'drafts'));
     writeFileSync(join(singleDir, 'drafts', 'draft-1.md'), '# Draft 1', 'utf-8');
     writeFileSync(join(singleDir, 'logo.png'), 'fake-png');
+    // #69: 带相对路径图片的 md + assets 目录
+    mkdirSync(join(singleDir, 'assets'));
+    writeFileSync(join(singleDir, 'assets', 'pic.png'), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    writeFileSync(
+      join(singleDir, 'with-image.md'),
+      '# Has Image\n\n![alt](assets/pic.png)\n',
+      'utf-8',
+    );
 
     multiDir1 = mkdtempSync(join(tmpdir(), 'e2e-multi1-'));
     writeFileSync(join(multiDir1, 'article-a.md'), '# Article A', 'utf-8');
@@ -159,5 +167,22 @@ describe('preview 文件浏览器 E2E', () => {
     }
     await page.screenshot({ path: 'test/artifacts/sidebar.png', fullPage: true });
     expect(await page.locator('.file-sidebar').isVisible()).toBe(true);
+  });
+
+  it('E2E-06 (#69): 点选带图片的 md 后 <img src> 替换为 /image-proxy 代理 URL', async () => {
+    await gotoPreview();
+    await page.waitForFunction(() => !!(window as any).editor, { timeout: 10000 });
+
+    const imgItem = page.locator('.file-tree-item', { hasText: 'with-image.md' });
+    await imgItem.click();
+    await page.waitForTimeout(800);
+
+    const srcdoc = await page.evaluate(() => {
+      const preview = document.getElementById('preview') as HTMLIFrameElement;
+      return preview?.srcdoc || '';
+    });
+    // 渲染后 <img src> 必须是 /image-proxy?path=... 形态，不是原相对路径
+    expect(srcdoc).toContain('/image-proxy?path=');
+    expect(srcdoc).not.toMatch(/src="assets\/pic\.png"/);
   });
 });
