@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync, statSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { resolve, extname, basename } from 'node:path';
+import { resolve, dirname, extname, basename } from 'node:path';
 import { Command } from 'commander';
 import { globbySync } from 'globby';
 import { getCredential, getServerConfig } from '../config/credential.js';
@@ -8,6 +8,7 @@ import { WechatClientError } from '../wechat/client.js';
 import { renderArticle } from '../renderer/index.js';
 import { extractImageSrcs, replaceImageSrcs, extractFirstImage } from '../renderer/images.js';
 import { parseFrontmatter } from '../schema/frontmatter.js';
+import { resolveLocalImagePath, normalizeForLog } from '../utils/image-path.js';
 
 type Brand<T, B> = T & { __brand: B };
 type CdnUrl = Brand<string, 'cdn-url'>;
@@ -34,6 +35,8 @@ interface DraftResult {
   media_id: string;
   created_at: string;
   success: true;
+  /** 路径解析失败或文件不存在的图片 src 列表（用于排查预览/发布时图片静默失效，见 #68） */
+  failedImages?: string[];
 }
 
 export function registerPublishCommand(program: Command): void {
@@ -103,8 +106,11 @@ async function handleNewsPublish(options: Record<string, string | string[] | boo
   }
 
   const title = String(options.title || '').trim();
+  // #68: 以 md 文件所在目录为基准解析正文/封面相对路径，而非 process.cwd()
+  const mdPath = options.md ? resolve(String(options.md)) : undefined;
+  const mdDir = mdPath ? dirname(mdPath) : resolve(process.cwd());
   const mdContent = options.md
-    ? readFileSync(String(options.md), 'utf-8')
+    ? readFileSync(mdPath!, 'utf-8')
     : String(options.content || '').trim();
 
   // 渲染 Markdown
@@ -144,6 +150,7 @@ async function handleNewsPublish(options: Record<string, string | string[] | boo
     appId: cred.appId,
     appSecret: cred.appSecret,
     dryRun,
+    baseDir: mdDir,
   });
 
   console.log(JSON.stringify(result, null, 2));
@@ -385,8 +392,14 @@ export async function executeNewsPublish(params: {
   appId: string;
   appSecret: string;
   dryRun?: boolean;
+  /**
+   * 解析正文/封面相对图片路径的基准目录。
+   * #68: 必须为 md 文件所在目录，否则从非 md 目录执行发布会导致图片静默跳过。
+   */
+  baseDir?: string;
 }): Promise<DraftResult> {
-  const { title, content, cover, author, sourceUrl, digest, needOpenComment, onlyFansCanComment, serverUrl, apiKey, dryRun } = params;
+  const { title, content, cover, author, sourceUrl, digest, needOpenComment, onlyFansCanComment, serverUrl, apiKey, dryRun, baseDir } = params;
+  const imageBaseDir = baseDir ?? process.cwd();
 
   if (!serverUrl && !dryRun) {
     throw new WechatClientError(
@@ -411,6 +424,8 @@ export async function executeNewsPublish(params: {
   // - srcToMediaId → 用于 thumb_media_id 查找（需微信 media_id）
   const srcToCdnUrl: Record<string, CdnUrl> = {};
   const srcToMediaId: Record<string, MediaId> = {};
+  // #68: 路径解析失败的图片不再静默 continue，收集起来在结果中可见
+  const failedImages: string[] = [];
 
   for (const src of imageSrcs) {
     if (src.startsWith('data:')) continue;
@@ -426,18 +441,15 @@ export async function executeNewsPublish(params: {
       }
       imagePath = await downloadImage(src);
     } else {
-      const decodedSrc = decodeURIComponent(src);
-      try {
-        statSync(decodedSrc);
-        imagePath = decodedSrc;
-      } catch {
-        try {
-          statSync(src);
-          imagePath = src;
-        } catch {
-          continue;
-        }
+      // #68: 路径基准由 CWD 改为 baseDir（md 文件所在目录）
+      const resolved = resolveLocalImagePath(imageBaseDir, src);
+      if (!resolved) {
+        const base = normalizeForLog(imageBaseDir);
+        console.warn(`[warn] 图片不存在，跳过上传: src="${src}" baseDir="${base}"`);
+        failedImages.push(src);
+        continue;
       }
+      imagePath = resolved;
     }
 
     const buffer = readFileSync(imagePath);
@@ -489,10 +501,14 @@ export async function executeNewsPublish(params: {
 
   if (dryRun) {
     console.log(`[dry-run] 草稿体准备完毕: { title: "${title}", images: ${imageSrcs.length}, thumb: ${thumbMediaId || 'none'} }`);
+    if (failedImages.length > 0) {
+      console.warn(`[dry-run] ${failedImages.length} 张图片路径解析失败: ${failedImages.map((s) => `"${s}"`).join(', ')}`);
+    }
     return {
       media_id: 'dry-run',
       created_at: new Date().toISOString(),
       success: true,
+      failedImages: failedImages.length > 0 ? failedImages : undefined,
     };
   }
 
